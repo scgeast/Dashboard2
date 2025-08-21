@@ -160,4 +160,4 @@ if uploaded_file:
         cust_perf = cust_perf.sort_values(by="Volume", ascending=False)
         fig_customer = px.bar(cust_perf, x="End Customer", y="Volume", text="Volume", color="End Customer",
                               title="Performa End Customer", color_discrete_sequence=color_palette)
-        st.plotly_chart(styled_chart(fig))
+        st.plotly_chart(styled_chart(fig_customer))
