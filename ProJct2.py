@@ -1,95 +1,95 @@
-# Dashboard2# ========== bagian sebelumnya tetap ========== #
-# ...
-# Tetap pakai kode sampai bagian:
-# if uploaded_file:
+# Dashboard2 Full Version
+import streamlit as st
+import pandas as pd
+import plotly.express as px
 
+# =========================
+# Konfigurasi halaman
+# =========================
+st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
+
+# =========================
+# Tema Futuristik
+# =========================
+color_palette = ["#00FFFF", "#8A2BE2", "#00FF00", "#FF00FF", "#FFD700", "#00CED1"]
+
+# =========================
+# Sidebar Tema
+# =========================
+st.sidebar.header("🎨 Pengaturan Tampilan")
+theme = st.sidebar.radio("Pilih Tema", ["Gelap", "Terang"])
+bg_color = "#0d0f15" if theme == "Gelap" else "white"
+font_color = "white" if theme == "Gelap" else "black"
+
+st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan Sales</h1>", unsafe_allow_html=True)
+
+# =========================
+# Upload File
+# =========================
+uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
+
+# =========================
+# Fungsi Styling Chart
+# =========================
+def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=False, title_font_size=18):
+    fig.update_layout(
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
+        font=dict(color=font_color, size=font_size),
+        title_font=dict(color=font_color, size=title_font_size),
+        xaxis=dict(tickangle=45),
+        showlegend=show_legend
+    )
+    if height:
+        fig.update_layout(height=height)
+    if margin:
+        fig.update_layout(margin=margin)
+    try:
+        fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position)
+    except Exception:
+        pass
+    return fig
+
+# =========================
+# Fungsi kotak metric
+# =========================
+def boxed_metric(label, value):
+    st.markdown(f"""
+    <div style="
+        border: 2px solid {font_color};
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        background-color: {'#1f1f1f' if theme=='Gelap' else '#f5f5f5'};
+    ">
+        <h4 style='margin:5px;color:{font_color}'>{label}</h4>
+        <p style='font-size:20px;margin:0;color:{font_color}'>{value}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================
+# Fungsi Render Volume Chart
+# =========================
+def render_volume_chart(df_filtered, font_color):
+    st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
+
+    sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+    sales_trend["Volume"] = sales_trend["Volume"].round(2)
+
+    fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", text="Volume", title="Volume Per Day")
+    fig_sales_trend.update_traces(mode="lines+markers+text", textposition="top center")
+
+    st.plotly_chart(
+        styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
+        use_container_width=True
+    )
+
+# =========================
+# MAIN APP
+# =========================
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
-
-    rename_map = {
-        "Tanggal P": "Tanggal Pengiriman",
-        "Plant Name": "Plant Name",
-        "Area": "Area",
-        "Ritase": "Ritase"
-    }
-    df.rename(columns=rename_map, inplace=True)
-
-    for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance"]:
-        if col not in df.columns:
-            df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
-
-    df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
-
-    # === Filter Sidebar ===
-    st.sidebar.header("🔎 Filter Data")
-    start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
-    end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
-    area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
-    plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
-    plant = st.sidebar.multiselect("Plant Name", options=plant_options)
-    salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
-    end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
-
-    if st.sidebar.button("🔄 Reset Filter"):
-        st.experimental_rerun()
-
-    df_filtered = df[
-        (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
-        (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
-    ]
-    if area:
-        df_filtered = df_filtered[df_filtered["Area"].isin(area)]
-    if plant:
-        df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
-    if salesman:
-        df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
-    if end_customer:
-        df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
-
-    # === SUMMARIZE ===
-    st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
-    colA, colB, colC, colD, colE, colF = st.columns(6)
-
-    def boxed_metric(label, value):
-        st.markdown(f"""
-        <div style="
-            border: 2px solid {font_color};
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            background-color: {'#1f1f1f' if theme=='Gelap' else '#f5f5f5'};
-        ">
-            <h4 style='margin:5px;color:{font_color}'>{label}</h4>
-            <p style='font-size:20px;margin:0;color:{font_color}'>{value}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with colA:
-        boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
-    with colB:
-        boxed_metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
-    with colC:
-        boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
-    with colD:
-        boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-    with colE:
-        boxed_metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
-    with colF:
-        boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
-
-    # === VISUALISASI ===
-    def render_volume_chart(df_filtered, font_color):
-        # Semua kode dari fungsi kamu sebelumnya tetap
-        # ...
-        # (sudah benar, tinggal dipanggil)
-
-        # [Paste semua isi fungsi kamu di sini seperti sebelumnya, tidak perlu diubah]
-        # ...
-
-    # 👇 Panggil fungsi visualisasinya agar ditampilkan
-    render_volume_chart(df_filtered, font_color)
-
 
     # Rename kolom jika perlu
     rename_map = {
@@ -100,8 +100,8 @@ if uploaded_file:
     }
     df.rename(columns=rename_map, inplace=True)
 
-    # Tambahkan kolom jika tidak ada
-    for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance"]:
+    # Tambahkan kolom default jika tidak ada
+    for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance", "Ritase"]:
         if col not in df.columns:
             df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
 
@@ -141,50 +141,27 @@ if uploaded_file:
     # =========================
     # Dashboard Summary
     # =========================
-st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
 
-colA, colB, colC, colD, colE, colF = st.columns(6)
+    colA, colB, colC, colD, colE, colF = st.columns(6)
 
-# Fungsi kotak metric
-def boxed_metric(label, value):
-    st.markdown(f"""
-    <div style="
-        border: 2px solid {font_color};
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        background-color: {'#1f1f1f' if theme=='Gelap' else '#f5f5f5'};
-    ">
-        <h4 style='margin:5px;color:{font_color}'>{label}</h4>
-        <p style='font-size:20px;margin:0;color:{font_color}'>{value}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
-boxed_metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
-boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
-boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-boxed_metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
-boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
-
+    with colA:
+        boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
+    with colB:
+        boxed_metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
+    with colC:
+        boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
+    with colD:
+        boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
+    with colE:
+        boxed_metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
+    with colF:
+        boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
 
     # =========================
-    # Volume Per Day
+    # Volume Per Day Chart
     # =========================
-def render_volume_chart(df_filtered, font_color):
-    st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
-
-    sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
-    sales_trend["Volume"] = sales_trend["Volume"].round(2)
-
-    fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", text="Volume", title="Volume Per Day")
-    fig_sales_trend.update_traces(mode="lines+markers+text", textposition="top center")
-
-    st.plotly_chart(
-        styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
-        use_container_width=True
-    )
-
+    render_volume_chart(df_filtered, font_color)
 
     # =========================
     # Perform Delivery per Area & Plant
@@ -193,13 +170,13 @@ def render_volume_chart(df_filtered, font_color):
     with col1:
         volume_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
         fig_area = px.bar(volume_area, x="Area", y="Volume", text="Volume", color="Area",
-                          title="Perform Delivery per Area", color_discrete_sequence=color_palette)
+                         title="Perform Delivery per Area", color_discrete_sequence=color_palette)
         st.plotly_chart(styled_chart(fig_area), use_container_width=True)
 
     with col2:
         volume_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
         fig_plant = px.bar(volume_plant, x="Plant Name", y="Volume", text="Volume", color="Plant Name",
-                           title="Perform Delivery per Plant", color_discrete_sequence=color_palette)
+                          title="Perform Delivery per Plant", color_discrete_sequence=color_palette)
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
@@ -208,12 +185,12 @@ def render_volume_chart(df_filtered, font_color):
     st.markdown(f"<h2 style='color:{font_color}'>👤 Performa Sales & Customer</h2>", unsafe_allow_html=True)
     sales_perf = df_filtered.groupby("Salesman")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
     fig_salesman = px.bar(sales_perf, x="Salesman", y="Volume", text="Volume", color="Salesman",
-                          title="Performa Salesman", color_discrete_sequence=color_palette)
+                         title="Performa Salesman", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_salesman, height=600), use_container_width=True)
 
     cust_perf = df_filtered.groupby("End Customer")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
     fig_customer = px.bar(cust_perf, x="End Customer", y="Volume", text="Volume", color="End Customer",
-                          title="Performa End Customer", color_discrete_sequence=color_palette)
+                         title="Performa End Customer", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_customer, height=600), use_container_width=True)
 
     # =========================
@@ -227,7 +204,7 @@ def render_volume_chart(df_filtered, font_color):
 
     volume_avg = df_filtered.groupby("Truck No")["Volume"].mean().reset_index().sort_values(by="Volume", ascending=False)
     fig_truck_avg = px.bar(volume_avg, x="Truck No", y="Volume", text="Volume", color="Truck No",
-                           title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
+                          title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
     # =========================
@@ -259,3 +236,8 @@ def render_volume_chart(df_filtered, font_color):
         avg_dist_area["Distance"] = avg_dist_area["Distance"].round(2)
         fig_avg_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Average Distance per Area")
         st.plotly_chart(styled_chart(fig_avg_dist_area), use_container_width=True)
+
+else:
+    st.info("Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
+
+                 
