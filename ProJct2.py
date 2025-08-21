@@ -191,7 +191,7 @@ if uploaded_file:
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
-        """
+    """
     if height:
         fig.update_layout(height=height)
 
