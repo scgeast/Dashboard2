@@ -164,4 +164,5 @@ st.plotly_chart(create_chart(sales_df, "Salesman", "Volume", "Performa Salesman"
 
 cust_df = df_filtered.groupby("End Customer")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
 cust_df["Volume"] = cust_df["Volume"].round(2)
-st.plotly_chart(create_chart(cust_df, "End Customer", "Volume", "Performa End Customer",
+st.plotly_chart(create_chart(cust_df, "End Customer", "Volume", "Performa End Customer", "bar", 600), use_container_width=True)
+
