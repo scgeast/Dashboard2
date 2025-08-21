@@ -18,10 +18,10 @@ if uploaded_file:
     st.subheader("🧾 Kolom Ditemukan di File")
     st.write(df.columns.tolist())
 
-    # Daftar kolom yang diperlukan
+    # Daftar kolom yang diperlukan (tanpa 'Jadwal Kirim')
     expected_columns = [
         "Tanggal Pengiriman", "Region", "Pabrik", "Salesman", "End Customer",
-        "Jumlah Penjualan", "Jumlah Pengiriman", "Nomor Truk", "Jadwal Kirim"
+        "Jumlah Penjualan", "Jumlah Pengiriman", "Nomor Truk"
     ]
     missing_columns = [col for col in expected_columns if col not in df.columns]
 
@@ -54,8 +54,7 @@ if uploaded_file:
             output = BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 dataframe.to_excel(writer, index=False, sheet_name='Report')
-            processed_data = output.getvalue()
-            return processed_data
+            return output.getvalue()
 
         excel_data = to_excel(df)
         st.download_button(label="📥 Download data sebagai Excel", data=excel_data, file_name='report.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -95,9 +94,6 @@ if uploaded_file:
 
         fig6 = px.bar(df.groupby("Nomor Truk")["Jumlah Pengiriman"].sum().reset_index(), x="Nomor Truk", y="Jumlah Pengiriman", title="Logistik per Truk")
         st.plotly_chart(fig6, use_container_width=True)
-
-        fig7 = px.bar(df.groupby("Jadwal Kirim")["Jumlah Pengiriman"].sum().reset_index(), x="Jadwal Kirim", y="Jumlah Pengiriman", title="Logistik per Jadwal Kirim")
-        st.plotly_chart(fig7, use_container_width=True)
 
         # Tren
         st.subheader("📈 Visualisasi Tren")
