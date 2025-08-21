@@ -1,16 +1,22 @@
 # Dashboard2
-# Dashboard2
+# Dashboard2 Full Version
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- Konfigurasi halaman ---
+# =========================
+# Konfigurasi halaman
+# =========================
 st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
 
-# --- Tema Futuristik ---
+# =========================
+# Tema Futuristik
+# =========================
 color_palette = ["#00FFFF", "#8A2BE2", "#00FF00", "#FF00FF", "#FFD700", "#00CED1"]
 
-# --- Sidebar Tema ---
+# =========================
+# Sidebar Tema
+# =========================
 st.sidebar.header("🎨 Pengaturan Tampilan")
 theme = st.sidebar.radio("Pilih Tema", ["Gelap", "Terang"])
 bg_color = "#0d0f15" if theme == "Gelap" else "white"
@@ -18,10 +24,14 @@ font_color = "white" if theme == "Gelap" else "black"
 
 st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan Sales</h1>", unsafe_allow_html=True)
 
-# --- Upload File ---
+# =========================
+# Upload File
+# =========================
 uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
 
-# --- Fungsi Styling Chart ---
+# =========================
+# Fungsi Styling Chart
+# =========================
 def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=False, title_font_size=18):
     fig.update_layout(
         plot_bgcolor=bg_color,
@@ -41,12 +51,14 @@ def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f",
         pass
     return fig
 
+# =========================
+# Jika File Diupload
+# =========================
 if uploaded_file:
-    # --- Load Data ---
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
 
-    # --- Penyesuaian kolom ---
+    # Rename kolom jika perlu
     rename_map = {
         "Tanggal P": "Tanggal Pengiriman",
         "Plant Name": "Plant Name",
@@ -62,7 +74,9 @@ if uploaded_file:
 
     df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
 
-    # --- Sidebar Filter ---
+    # =========================
+    # Sidebar Filter
+    # =========================
     st.sidebar.header("🔎 Filter Data")
     start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
     end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
@@ -75,7 +89,9 @@ if uploaded_file:
     if st.sidebar.button("🔄 Reset Filter"):
         st.experimental_rerun()
 
-    # --- Filter Data ---
+    # =========================
+    # Filter Data
+    # =========================
     df_filtered = df[
         (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
         (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
@@ -89,7 +105,9 @@ if uploaded_file:
     if end_customer:
         df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
 
-    # --- Dashboard Summary ---
+    # =========================
+    # Dashboard Summary
+    # =========================
     st.markdown(f"<h2 style='color:{font_color}'>📊 Dashboard Summary</h2>", unsafe_allow_html=True)
     colA, colB, colC, colD, colE, colF = st.columns(6)
     colA.metric("Total Area", f"{df_filtered['Area'].nunique()}")
@@ -99,14 +117,18 @@ if uploaded_file:
     colE.metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
     colF.metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
 
-    # --- Volume Per Day ---
+    # =========================
+    # Volume Per Day
+    # =========================
     st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
     sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
     sales_trend["Volume"] = sales_trend["Volume"].round(2)
     fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", markers=True, text="Volume", title="Volume Per Day")
     st.plotly_chart(styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"), use_container_width=True)
 
-    # --- Perform Delivery per Area & Plant ---
+    # =========================
+    # Perform Delivery per Area & Plant
+    # =========================
     col1, col2 = st.columns(2)
     with col1:
         volume_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
@@ -120,7 +142,9 @@ if uploaded_file:
                            title="Perform Delivery per Plant", color_discrete_sequence=color_palette)
         st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
-    # --- Performa Sales & Customer ---
+    # =========================
+    # Performa Sales & Customer
+    # =========================
     st.markdown(f"<h2 style='color:{font_color}'>👤 Performa Sales & Customer</h2>", unsafe_allow_html=True)
     sales_perf = df_filtered.groupby("Salesman")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
     fig_salesman = px.bar(sales_perf, x="Salesman", y="Volume", text="Volume", color="Salesman",
@@ -132,7 +156,9 @@ if uploaded_file:
                           title="Performa End Customer", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_customer, height=600), use_container_width=True)
 
-    # --- Utilisasi Truck Mixer ---
+    # =========================
+    # Utilisasi Truck Mixer
+    # =========================
     st.markdown(f"<h2 style='color:{font_color}'>🚚 Utilisasi Truck Mixer</h2>", unsafe_allow_html=True)
     ritase_truck = df_filtered.groupby("Truck No")["Ritase"].sum().reset_index().sort_values(by="Ritase", ascending=False)
     fig_truck_total = px.bar(ritase_truck, x="Truck No", y="Ritase", text="Ritase", color="Truck No",
@@ -143,3 +169,33 @@ if uploaded_file:
     fig_truck_avg = px.bar(volume_avg, x="Truck No", y="Volume", text="Volume", color="Truck No",
                            title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
+
+    # =========================
+    # 📈 Visualisasi Tren & 📍 Analisa Jarak Tempuh (Paling Bawah)
+    # =========================
+    st.markdown("---")  # garis pemisah
+
+    st.subheader("📈 Visualisasi Tren")
+    trend_ritase = df_filtered.groupby("Tanggal Pengiriman")["Ritase"].sum().reset_index()
+    trend_ritase["Ritase"] = trend_ritase["Ritase"].round(2)
+    fig_trend_ritase = px.line(trend_ritase, x="Tanggal Pengiriman", y="Ritase", markers=True, text="Ritase", title="Tren Ritase")
+    st.plotly_chart(styled_chart(fig_trend_ritase, height=400, text_position="top center"), use_container_width=True)
+
+    trend_volume = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+    trend_volume["Volume"] = trend_volume["Volume"].round(2)
+    fig_trend_volume = px.line(trend_volume, x="Tanggal Pengiriman", y="Volume", markers=True, text="Volume", title="Tren Volume")
+    st.plotly_chart(styled_chart(fig_trend_volume, height=400, text_position="top center"), use_container_width=True)
+
+    st.subheader("📍 Analisa Jarak Tempuh")
+    col5, col6 = st.columns(2)
+    with col5:
+        avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
+        avg_dist_plant["Distance"] = avg_dist_plant["Distance"].round(2)
+        fig_avg_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance", text="Distance", title="Average Distance per Plant")
+        st.plotly_chart(styled_chart(fig_avg_dist_plant), use_container_width=True)
+
+    with col6:
+        avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
+        avg_dist_area["Distance"] = avg_dist_area["Distance"].round(2)
+        fig_avg_dist_area = px.bar(avg_dist_area, x="Area", y="Distance", text="Distance", title="Average Distance per Area")
+        st.plotly_chart(styled_chart(fig_avg_dist_area), use_container_width=True)
