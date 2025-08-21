@@ -28,7 +28,7 @@ df = pd.read_excel(uploaded_file)
 df.columns = df.columns.str.strip()
 
 expected_columns = [
-    "Tanggal Pengiriman", "Area", "Plant Name", "Salesman", "End Customer",
+    "Tanggal Pengiriman", "Area", "Plant Name", "Salesman", "End Customer"
     "Volume", "Ritase", "Truck No", "Distance"
 ]
 if not set(expected_columns).issubset(df.columns):
