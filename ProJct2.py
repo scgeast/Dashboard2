@@ -1,61 +1,55 @@
 # Dashboard2
-# Dashboard2
 import streamlit as st
 import plotly.express as px
+import pandas as pd
+import io
+import pdfkit
 
-# Contoh kondisi untuk memilih tampilan chart
-show_slider = True  # Ganti dengan kondisi sebenarnya sesuai kebutuhan
+# --- Simulasi Data (ganti dengan data asli kamu) ---
+data = {
+    "Truck No": ["T01", "T02", "T03", "T04"],
+    "Ritase": [10, 15, 12, 18],
+    "Distance": [25.5, 30.2, 28.0, 35.1],
+    "Plant Name": ["Plant A", "Plant B", "Plant A", "Plant C"],
+    "Area": ["North", "South", "North", "East"]
+}
+df = pd.DataFrame(data)
 
-# ---- Average Ritase per Truck ----
-if show_slider:
-    fig_avg = px.bar(
-        ritase_per_truck,
-        x="Truck No",
-        y="Average_Ritase",
-        text="Average_Ritase",
-        title="Average Ritase per Truck"
-    )
-    fig_avg.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-    fig_avg.update_layout(
-        xaxis=dict(
-            tickmode='array',
-            tickvals=ritase_per_truck['Truck No'],
-            tickangle=45,
-            rangeslider=dict(visible=True)
-        ),
-        yaxis_title="Average Ritase",
-        plot_bgcolor="#0d0f15",
-        paper_bgcolor="#0d0f15",
-        font=dict(color="white"),
-        margin=dict(l=50, r=50, t=80, b=200)
-    )
-    st.plotly_chart(fig_avg, use_container_width=True)
-else:
-    fig_avg = px.bar(
-        ritase_per_truck,
-        x="Truck No",
-        y="Average_Ritase",
-        text="Average_Ritase",
-        title="Average Ritase per Truck"
-    )
-    fig_avg.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-    fig_avg.update_layout(
-        xaxis=dict(tickangle=45),
-        yaxis_title="Average Ritase",
-        showlegend=False,
-        plot_bgcolor="#0d0f15",
-        paper_bgcolor="#0d0f15",
-        font=dict(color="white"),
-        margin=dict(l=50, r=50, t=80, b=200)
-    )
-    st.plotly_chart(fig_avg, use_container_width=True)
+# --- Sidebar Filter ---
+st.sidebar.header("🔍 Filter Data")
+selected_area = st.sidebar.multiselect("Pilih Area", df["Area"].unique(), default=df["Area"].unique())
+selected_plant = st.sidebar.multiselect("Pilih Plant", df["Plant Name"].unique(), default=df["Plant Name"].unique())
 
-# ---- Average Distance ----
+filtered_df = df[(df["Area"].isin(selected_area)) & (df["Plant Name"].isin(selected_plant))]
+
+# --- Average Ritase per Truck ---
+ritase_per_truck = filtered_df.groupby("Truck No", as_index=False)["Ritase"].mean()
+ritase_per_truck.rename(columns={"Ritase": "Average_Ritase"}, inplace=True)
+
+st.markdown("## 🚚 Average Ritase per Truck")
+fig_avg = px.bar(
+    ritase_per_truck,
+    x="Truck No",
+    y="Average_Ritase",
+    text="Average_Ritase",
+    title="Average Ritase per Truck"
+)
+fig_avg.update_traces(texttemplate='%{text:.0f}', textposition='outside')
+fig_avg.update_layout(
+    xaxis=dict(tickangle=45),
+    yaxis_title="Average Ritase",
+    plot_bgcolor="#0d0f15",
+    paper_bgcolor="#0d0f15",
+    font=dict(color="white"),
+    margin=dict(l=50, r=50, t=80, b=200)
+)
+st.plotly_chart(fig_avg, use_container_width=True)
+
+# --- Average Distance ---
 avg_dist_plant = filtered_df.groupby("Plant Name", as_index=False)["Distance"].mean()
 avg_dist_area = filtered_df.groupby("Area", as_index=False)["Distance"].mean()
 
 st.markdown("## 📏 Average Distance")
-
 col1, col2 = st.columns(2)
 
 with col1:
@@ -70,7 +64,6 @@ with col1:
     fig_dist1.update_layout(
         xaxis=dict(tickangle=45),
         yaxis_title="Distance",
-        showlegend=False,
         plot_bgcolor="#0d0f15",
         paper_bgcolor="#0d0f15",
         font=dict(color="white"),
@@ -90,10 +83,38 @@ with col2:
     fig_dist2.update_layout(
         xaxis=dict(tickangle=45),
         yaxis_title="Distance",
-        showlegend=False,
         plot_bgcolor="#0d0f15",
         paper_bgcolor="#0d0f15",
         font=dict(color="white"),
         margin=dict(l=50, r=50, t=80, b=200)
     )
     st.plotly_chart(fig_dist2, use_container_width=True)
+
+# --- Export Section ---
+st.markdown("## 📤 Export Data")
+
+# Export to Excel
+excel_buffer = io.BytesIO()
+with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+    filtered_df.to_excel(writer, index=False, sheet_name='Filtered Data')
+    writer.save()
+
+st.download_button(
+    label="📊 Download Excel",
+    data=excel_buffer.getvalue(),
+    file_name="filtered_data.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+# Export to PDF
+html = filtered_df.to_html(index=False)
+try:
+    pdf_bytes = pdfkit.from_string(html, False)
+    st.download_button(
+        label="📄 Download PDF",
+        data=pdf_bytes,
+        file_name="filtered_data.pdf",
+        mime="application/pdf"
+    )
+except:
+    st.warning("PDF export membutuhkan `pdfkit` dan `wkhtmltopdf`. Silakan install dulu di komputer kamu.")
