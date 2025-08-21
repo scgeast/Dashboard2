@@ -106,15 +106,3 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-# Export to PDF
-html = filtered_df.to_html(index=False)
-try:
-    pdf_bytes = pdfkit.from_string(html, False)
-    st.download_button(
-        label="📄 Download PDF",
-        data=pdf_bytes,
-        file_name="filtered_data.pdf",
-        mime="application/pdf"
-    )
-except:
-    st.warning("PDF export membutuhkan `pdfkit` dan `wkhtmltopdf`. Silakan install dulu di komputer kamu.")
