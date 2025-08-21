@@ -20,6 +20,44 @@ st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan
 
 # Upload file
 uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
+# 🎨 Modular Styling Function
+def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=False, title_font_size=18):
+    """
+    Menata chart Plotly agar tampil profesional dan fleksibel.
+
+    Parameters:
+    - fig: objek figure dari Plotly
+    - height: tinggi chart (int)
+    - font_size: ukuran font umum (int)
+    - margin: dict margin seperti {'t':40, 'b':40}
+    - text_format: format angka pada label teks (str)
+    - text_position: posisi teks seperti 'outside', 'top center'
+    - show_legend: apakah legend ditampilkan (bool)
+    - title_font_size: ukuran font judul (int)
+
+    Returns:
+    - fig yang sudah diupdate
+    """
+    fig.update_layout(
+        plot_bgcolor=bg_color,
+        paper_bgcolor=bg_color,
+        font=dict(color=font_color, size=font_size),
+        title_font=dict(color=font_color, size=title_font_size),
+        xaxis=dict(tickangle=45),
+        showlegend=show_legend
+    )
+
+    if height:
+        fig.update_layout(height=height)
+    if margin:
+        fig.update_layout(margin=margin)
+
+    try:
+        fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position)
+    except Exception:
+        pass
+
+    return fig
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
@@ -153,8 +191,7 @@ if uploaded_file:
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
-    Fungsi untuk menata chart Plotly agar tampil profesional dan fleksibel.
-    """
+        """
     if height:
         fig.update_layout(height=height)
 
