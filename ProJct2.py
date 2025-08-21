@@ -4,99 +4,106 @@ import pandas as pd
 import plotly.express as px
 from io import BytesIO
 
-# Judul dashboard
-st.title("Dashboard Analyst Delivery dan Sales")
+st.title("📦 Dashboard Analyst Delivery dan Sales")
 
-# Upload file Excel
+# Upload file
 uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
 
 if uploaded_file:
-    # Baca file Excel
+    # Baca data dan bersihkan nama kolom
     df = pd.read_excel(uploaded_file)
+    df.columns = df.columns.str.strip()  # Hapus spasi depan/belakang
 
-    # Sidebar Filter
-    st.sidebar.header("Filter Data")
-    tanggal_pengiriman = st.sidebar.date_input("Tanggal Pengiriman")
-    region = st.sidebar.multiselect("Region", options=df["Region"].dropna().unique())
-    pabrik = st.sidebar.multiselect("Pabrik", options=df["Pabrik"].dropna().unique())
-    salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
-    end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
+    # Tampilkan kolom yang tersedia
+    st.subheader("🧾 Kolom Ditemukan di File")
+    st.write(df.columns.tolist())
 
-    # Apply Filters
-    if tanggal_pengiriman:
-        df = df[df["Tanggal Pengiriman"] == pd.to_datetime(tanggal_pengiriman)]
-    if region:
-        df = df[df["Region"].isin(region)]
-    if pabrik:
-        df = df[df["Pabrik"].isin(pabrik)]
-    if salesman:
-        df = df[df["Salesman"].isin(salesman)]
-    if end_customer:
-        df = df[df["End Customer"].isin(end_customer)]
+    # Daftar kolom yang diperlukan
+    expected_columns = [
+        "Tanggal Pengiriman", "Region", "Pabrik", "Salesman", "End Customer",
+        "Jumlah Penjualan", "Jumlah Pengiriman", "Nomor Truk", "Jadwal Kirim"
+    ]
+    missing_columns = [col for col in expected_columns if col not in df.columns]
 
-    # Fungsi download ke Excel
-    def to_excel(dataframe):
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            dataframe.to_excel(writer, index=False, sheet_name='Report')
-        processed_data = output.getvalue()
-        return processed_data
+    if missing_columns:
+        st.warning(f"Kolom berikut tidak ditemukan di file Excel: {missing_columns}")
+    else:
+        # Sidebar Filter
+        st.sidebar.header("🔎 Filter Data")
 
-    # Generate Excel file for download
-    excel_data = to_excel(df)
+        tanggal_pengiriman = st.sidebar.date_input("Tanggal Pengiriman")
+        region = st.sidebar.multiselect("Region", options=df["Region"].dropna().unique())
+        pabrik = st.sidebar.multiselect("Pabrik", options=df["Pabrik"].dropna().unique())
+        salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
+        end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
 
-    # Tombol Download
-    st.download_button(label='📥 Download data sebagai Excel', data=excel_data, file_name='report.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        # Terapkan Filter
+        if tanggal_pengiriman:
+            df = df[df["Tanggal Pengiriman"] == pd.to_datetime(tanggal_pengiriman)]
+        if region:
+            df = df[df["Region"].isin(region)]
+        if pabrik:
+            df = df[df["Pabrik"].isin(pabrik)]
+        if salesman:
+            df = df[df["Salesman"].isin(salesman)]
+        if end_customer:
+            df = df[df["End Customer"].isin(end_customer)]
 
-    # Analisa Penjualan
-    st.subheader("📊 Analisa Penjualan")
-    penjualan_per_tanggal = df.groupby("Tanggal Pengiriman")["Jumlah Penjualan"].sum().reset_index()
-    fig1 = px.line(penjualan_per_tanggal, x="Tanggal Pengiriman", y="Jumlah Penjualan")
-    st.plotly_chart(fig1, use_container_width=True)
+        # Fungsi ekspor ke Excel
+        def to_excel(dataframe):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                dataframe.to_excel(writer, index=False, sheet_name='Report')
+            processed_data = output.getvalue()
+            return processed_data
 
-    # Drill Down Berdasarkan Region
-    st.subheader("🔍 Filter dan Drill Down")
-    region_filter = st.selectbox("Pilih Region", options=df["Region"].dropna().unique())
-    df_filtered = df[df["Region"] == region_filter]
-    st.dataframe(df_filtered)
+        excel_data = to_excel(df)
+        st.download_button(label="📥 Download data sebagai Excel", data=excel_data, file_name='report.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-    # Visualisasi Lainnya
-    st.subheader("📍 Visualisasi Lainnya")
+        # Analisa Penjualan
+        st.subheader("📊 Analisa Penjualan")
+        penjualan_per_tanggal = df.groupby("Tanggal Pengiriman")["Jumlah Penjualan"].sum().reset_index()
+        fig1 = px.line(penjualan_per_tanggal, x="Tanggal Pengiriman", y="Jumlah Penjualan")
+        st.plotly_chart(fig1, use_container_width=True)
 
-    penjualan_per_region = df.groupby("Region")["Jumlah Penjualan"].sum().reset_index()
-    fig2 = px.bar(penjualan_per_region, x="Region", y="Jumlah Penjualan", title="Penjualan per Region")
-    st.plotly_chart(fig2, use_container_width=True)
+        # Drill Down Region
+        st.subheader("🔍 Drill Down per Region")
+        region_filter = st.selectbox("Pilih Region", options=df["Region"].unique())
+        df_filtered = df[df["Region"] == region_filter]
+        st.dataframe(df_filtered)
 
-    penjualan_per_pabrik = df.groupby("Pabrik")["Jumlah Penjualan"].sum().reset_index()
-    fig3 = px.bar(penjualan_per_pabrik, x="Pabrik", y="Jumlah Penjualan", title="Penjualan per Pabrik")
-    st.plotly_chart(fig3, use_container_width=True)
+        # Visualisasi
+        st.subheader("📍 Visualisasi Lain")
 
-    # Tracking Performa Sales
-    st.subheader("👤 Tracking Performa Sales")
-    performa_sales = df.groupby("Salesman")["Jumlah Penjualan"].sum().reset_index()
-    fig4 = px.bar(performa_sales, x="Salesman", y="Jumlah Penjualan", title="Performa Sales")
-    st.plotly_chart(fig4, use_container_width=True)
+        fig2 = px.bar(df.groupby("Region")["Jumlah Penjualan"].sum().reset_index(), x="Region", y="Jumlah Penjualan", title="Penjualan per Region")
+        st.plotly_chart(fig2, use_container_width=True)
 
-    performa_end_customer = df.groupby("End Customer")["Jumlah Penjualan"].sum().reset_index()
-    fig5 = px.bar(performa_end_customer, x="End Customer", y="Jumlah Penjualan", title="Performa End Customer")
-    st.plotly_chart(fig5, use_container_width=True)
+        fig3 = px.bar(df.groupby("Pabrik")["Jumlah Penjualan"].sum().reset_index(), x="Pabrik", y="Jumlah Penjualan", title="Penjualan per Pabrik")
+        st.plotly_chart(fig3, use_container_width=True)
 
-    # Optimasi Logistik
-    st.subheader("🚚 Optimasi Logistik")
-    logistik_per_truk = df.groupby("Nomor Truk")["Jumlah Pengiriman"].sum().reset_index()
-    fig6 = px.bar(logistik_per_truk, x="Nomor Truk", y="Jumlah Pengiriman", title="Logistik per Truk")
-    st.plotly_chart(fig6, use_container_width=True)
+        # Tracking Sales
+        st.subheader("👤 Performa Sales")
 
-    logistik_per_jadwal = df.groupby("Jadwal Kirim")["Jumlah Pengiriman"].sum().reset_index()
-    fig7 = px.bar(logistik_per_jadwal, x="Jadwal Kirim", y="Jumlah Pengiriman", title="Logistik per Jadwal")
-    st.plotly_chart(fig7, use_container_width=True)
+        fig4 = px.bar(df.groupby("Salesman")["Jumlah Penjualan"].sum().reset_index(), x="Salesman", y="Jumlah Penjualan", title="Performa Salesman")
+        st.plotly_chart(fig4, use_container_width=True)
 
-    # Visualisasi Tren
-    st.subheader("📈 Visualisasi Tren")
-    tren_pengiriman = df.groupby("Tanggal Pengiriman")["Jumlah Pengiriman"].sum().reset_index()
-    fig8 = px.line(tren_pengiriman, x="Tanggal Pengiriman", y="Jumlah Pengiriman", title="Tren Pengiriman")
-    st.plotly_chart(fig8, use_container_width=True)
+        fig5 = px.bar(df.groupby("End Customer")["Jumlah Penjualan"].sum().reset_index(), x="End Customer", y="Jumlah Penjualan", title="Performa End Customer")
+        st.plotly_chart(fig5, use_container_width=True)
 
-    tren_penjualan = df.groupby("Tanggal Pengiriman")["Jumlah Penjualan"].sum().reset_index()
-    fig9 = px.line(tren_penjualan, x="Tanggal Pengiriman", y="Jumlah Penjualan", title="Tren Penjualan")
-    st.plotly_chart(fig9, use_container_width=True)
+        # Logistik
+        st.subheader("🚚 Optimasi Logistik")
+
+        fig6 = px.bar(df.groupby("Nomor Truk")["Jumlah Pengiriman"].sum().reset_index(), x="Nomor Truk", y="Jumlah Pengiriman", title="Logistik per Truk")
+        st.plotly_chart(fig6, use_container_width=True)
+
+        fig7 = px.bar(df.groupby("Jadwal Kirim")["Jumlah Pengiriman"].sum().reset_index(), x="Jadwal Kirim", y="Jumlah Pengiriman", title="Logistik per Jadwal Kirim")
+        st.plotly_chart(fig7, use_container_width=True)
+
+        # Tren
+        st.subheader("📈 Visualisasi Tren")
+
+        fig8 = px.line(df.groupby("Tanggal Pengiriman")["Jumlah Pengiriman"].sum().reset_index(), x="Tanggal Pengiriman", y="Jumlah Pengiriman", title="Tren Pengiriman")
+        st.plotly_chart(fig8, use_container_width=True)
+
+        fig9 = px.line(df.groupby("Tanggal Pengiriman")["Jumlah Penjualan"].sum().reset_index(), x="Tanggal Pengiriman", y="Jumlah Penjualan", title="Tren Penjualan")
+        st.plotly_chart(fig9, use_container_width=True)
