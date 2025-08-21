@@ -1,9 +1,9 @@
 # Dashboard2
+# Dashboard2
 import streamlit as st
 import plotly.express as px
 import pandas as pd
 import io
-import pdfkit
 
 # --- Simulasi Data (ganti dengan data asli kamu) ---
 data = {
@@ -90,14 +90,12 @@ with col2:
     )
     st.plotly_chart(fig_dist2, use_container_width=True)
 
-# --- Export Section ---
+# --- Export to Excel Only ---
 st.markdown("## 📤 Export Data")
 
-# Export to Excel
 excel_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
     filtered_df.to_excel(writer, index=False, sheet_name='Filtered Data')
-    writer.save()
 
 st.download_button(
     label="📊 Download Excel",
@@ -105,4 +103,3 @@ st.download_button(
     file_name="filtered_data.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
