@@ -138,7 +138,7 @@ boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
     # =========================
     # Volume Per Day
     # =========================
-       st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
+      st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
     sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
     sales_trend["Volume"] = sales_trend["Volume"].round(2)
     fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", markers=True, text="Volume", title="Volume Per Day")
