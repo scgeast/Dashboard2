@@ -108,14 +108,32 @@ if uploaded_file:
     # =========================
     # Dashboard Summary
     # =========================
-    st.markdown(f"<h2 style='color:{font_color}'>📊 Dashboard Summary</h2>", unsafe_allow_html=True)
-    colA, colB, colC, colD, colE, colF = st.columns(6)
-    colA.metric("Total Area", f"{df_filtered['Area'].nunique()}")
-    colB.metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
-    colC.metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
-    colD.metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
-    colE.metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
-    colF.metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
+   st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
+
+colA, colB, colC, colD, colE, colF = st.columns(6)
+
+# Fungsi kotak metric
+def boxed_metric(label, value):
+    st.markdown(f"""
+    <div style="
+        border: 2px solid {font_color};
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        background-color: {'#1f1f1f' if theme=='Gelap' else '#f5f5f5'};
+    ">
+        <h4 style='margin:5px;color:{font_color}'>{label}</h4>
+        <p style='font-size:20px;margin:0;color:{font_color}'>{value}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
+boxed_metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
+boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
+boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
+boxed_metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
+boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
+
 
     # =========================
     # Volume Per Day
