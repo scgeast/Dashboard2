@@ -150,3 +150,63 @@ if uploaded_file:
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+# 🎨 Modular Styling Function
+def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=True, title_font_size=16):
+    """
+    Fungsi untuk menata chart Plotly agar tampil profesional dan fleksibel.
+    """
+    if height:
+        fig.update_layout(height=height)
+
+    if margin:
+        fig.update_layout(margin=margin)
+
+    fig.update_layout(
+        font=dict(size=font_size),
+        title_font=dict(size=title_font_size),
+        showlegend=show_legend
+    )
+
+    try:
+        fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position)
+    except Exception:
+        pass  # Abaikan jika trace tidak mendukung texttemplate
+
+    return fig
+
+# 📥 Load & Filter Data
+df = pd.read_excel("data.xlsx")  # Ganti dengan sumber data kamu
+df_filtered = df[df["Date"] >= "2023-01-01"]  # Contoh filter
+
+# 🎯 Summary Metrics (opsional)
+total_volume = df_filtered["Volume"].sum()
+total_sales = df_filtered["Sales"].sum()
+st.metric("Total Volume", f"{total_volume:,.2f}")
+st.metric("Total Sales", f"{total_sales:,.0f}")
+
+# 📊 Chart 1: Bar Chart - Volume per Truck
+volume_avg = df_filtered.groupby("Truck No")["Volume"].mean().reset_index()
+volume_avg["Volume"] = volume_avg["Volume"].round(2)
+volume_avg = volume_avg.sort_values(by="Volume", ascending=False)
+
+fig_truck_avg = px.bar(volume_avg, x="Truck No", y="Volume", text="Volume", color="Truck No",
+                       title="Average Volume per Ritase (Truck)", color_discrete_sequence=px.colors.qualitative.Set2)
+
+st.plotly_chart(
+    styled_chart(fig_truck_avg, height=400, font_size=13, margin=dict(t=40, b=40)),
+    use_container_width=True
+)
+
+# 📈 Chart 2: Line Chart - Sales Trend
+df_sales = df_filtered.groupby("Date")["Sales"].sum().reset_index()
+fig_sales_trend = px.line(df_sales, x="Date", y="Sales", markers=True, title="Sales Trend Over Time")
+fig_sales_trend.update_traces(text=df_sales["Sales"].round(2).astype(str))
+
+st.plotly_chart(
+    styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
+    use_container_width=True
+)
