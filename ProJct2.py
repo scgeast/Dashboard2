@@ -1,62 +1,95 @@
-# Dashboard2
-# Dashboard2 Full Version
-import streamlit as st
-import pandas as pd
-import plotly.express as px
+# Dashboard2# ========== bagian sebelumnya tetap ========== #
+# ...
+# Tetap pakai kode sampai bagian:
+# if uploaded_file:
 
-# =========================
-# Konfigurasi halaman
-# =========================
-st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
-
-# =========================
-# Tema Futuristik
-# =========================
-color_palette = ["#00FFFF", "#8A2BE2", "#00FF00", "#FF00FF", "#FFD700", "#00CED1"]
-
-# =========================
-# Sidebar Tema
-# =========================
-st.sidebar.header("🎨 Pengaturan Tampilan")
-theme = st.sidebar.radio("Pilih Tema", ["Gelap", "Terang"])
-bg_color = "#0d0f15" if theme == "Gelap" else "white"
-font_color = "white" if theme == "Gelap" else "black"
-
-st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan Sales</h1>", unsafe_allow_html=True)
-
-# =========================
-# Upload File
-# =========================
-uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
-
-# =========================
-# Fungsi Styling Chart
-# =========================
-def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=False, title_font_size=18):
-    fig.update_layout(
-        plot_bgcolor=bg_color,
-        paper_bgcolor=bg_color,
-        font=dict(color=font_color, size=font_size),
-        title_font=dict(color=font_color, size=title_font_size),
-        xaxis=dict(tickangle=45),
-        showlegend=show_legend
-    )
-    if height:
-        fig.update_layout(height=height)
-    if margin:
-        fig.update_layout(margin=margin)
-    try:
-        fig.update_traces(texttemplate=f"%{{text:{text_format}}}", textposition=text_position)
-    except Exception:
-        pass
-    return fig
-
-# =========================
-# Jika File Diupload
-# =========================
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
+
+    rename_map = {
+        "Tanggal P": "Tanggal Pengiriman",
+        "Plant Name": "Plant Name",
+        "Area": "Area",
+        "Ritase": "Ritase"
+    }
+    df.rename(columns=rename_map, inplace=True)
+
+    for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance"]:
+        if col not in df.columns:
+            df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
+
+    df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
+
+    # === Filter Sidebar ===
+    st.sidebar.header("🔎 Filter Data")
+    start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
+    end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
+    area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
+    plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
+    plant = st.sidebar.multiselect("Plant Name", options=plant_options)
+    salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
+    end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
+
+    if st.sidebar.button("🔄 Reset Filter"):
+        st.experimental_rerun()
+
+    df_filtered = df[
+        (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
+        (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
+    ]
+    if area:
+        df_filtered = df_filtered[df_filtered["Area"].isin(area)]
+    if plant:
+        df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
+    if salesman:
+        df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
+    if end_customer:
+        df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
+
+    # === SUMMARIZE ===
+    st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
+    colA, colB, colC, colD, colE, colF = st.columns(6)
+
+    def boxed_metric(label, value):
+        st.markdown(f"""
+        <div style="
+            border: 2px solid {font_color};
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            background-color: {'#1f1f1f' if theme=='Gelap' else '#f5f5f5'};
+        ">
+            <h4 style='margin:5px;color:{font_color}'>{label}</h4>
+            <p style='font-size:20px;margin:0;color:{font_color}'>{value}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with colA:
+        boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
+    with colB:
+        boxed_metric("Total Plant", f"{df_filtered['Plant Name'].nunique()}")
+    with colC:
+        boxed_metric("Total Volume", f"{df_filtered['Volume'].sum():,.2f}")
+    with colD:
+        boxed_metric("Total Ritase", f"{df_filtered['Ritase'].sum():,.2f}")
+    with colE:
+        boxed_metric("Total End Customer", f"{df_filtered['End Customer'].nunique()}")
+    with colF:
+        boxed_metric("Total Truck Mixer", f"{df_filtered['Truck No'].nunique()}")
+
+    # === VISUALISASI ===
+    def render_volume_chart(df_filtered, font_color):
+        # Semua kode dari fungsi kamu sebelumnya tetap
+        # ...
+        # (sudah benar, tinggal dipanggil)
+
+        # [Paste semua isi fungsi kamu di sini seperti sebelumnya, tidak perlu diubah]
+        # ...
+
+    # 👇 Panggil fungsi visualisasinya agar ditampilkan
+    render_volume_chart(df_filtered, font_color)
+
 
     # Rename kolom jika perlu
     rename_map = {
