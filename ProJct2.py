@@ -148,5 +148,5 @@ if uploaded_file:
     volume_avg = volume_avg.sort_values(by="Volume", ascending=False)
    fig_truck_avg = px.bar(volume_avg, x="Truck No", y="Volume", text="Volume", color="Truck No",
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
-st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
+   st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
