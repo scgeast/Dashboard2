@@ -98,7 +98,10 @@ if uploaded_file:
     fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", markers=True,
                               title="Volume Per Day", text="Volume")
     fig_sales_trend.update_traces(textposition="top center")
-    st.plotly_chart(styled_chart(fig_sales_trend, height=400), use_container_width=True)
+    st.plotly_chart(
+    styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
+    use_container_width=True
+)
 
     # Perform Delivery per Area & Plant
     col1, col2 = st.columns(2)
@@ -150,13 +153,6 @@ if uploaded_file:
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=color_palette)
     st.plotly_chart(styled_chart(fig_truck_avg), use_container_width=True)
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-
-# 🎨 Modular Styling Function
-def styled_chart(fig, height=None, font_size=12, margin=None, text_format=".2f", text_position="outside", show_legend=True, title_font_size=16):
-    """
     Fungsi untuk menata chart Plotly agar tampil profesional dan fleksibel.
     """
     if height:
@@ -197,7 +193,7 @@ fig_truck_avg = px.bar(volume_avg, x="Truck No", y="Volume", text="Volume", colo
                        title="Average Volume per Ritase (Truck)", color_discrete_sequence=px.colors.qualitative.Set2)
 
 st.plotly_chart(
-    styled_chart(fig_truck_avg, height=400, font_size=13, margin=dict(t=40, b=40)),
+    styled_chart(fig_truck_avg, height=500, margin=dict(t=40, b=40)),
     use_container_width=True
 )
 
