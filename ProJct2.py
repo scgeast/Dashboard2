@@ -108,7 +108,7 @@ if uploaded_file:
     # =========================
     # Dashboard Summary
     # =========================
-   st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
 
 colA, colB, colC, colD, colE, colF = st.columns(6)
 
