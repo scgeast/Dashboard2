@@ -35,7 +35,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🚀 Futuristic Delivery & Sales Dashboard")
+st.title("🚀 Dashboard Delivery & Sales ")
 
 # Upload file
 uploaded_file = st.file_uploader("Upload file Excel", type=["xlsx", "xls"])
