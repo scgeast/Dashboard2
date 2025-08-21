@@ -165,4 +165,4 @@ if uploaded_file:
 
         # 📈 Visualisasi Tren
         st.subheader("📈 Visualisasi Tren")
-        trend_ritase = df_filtered.groupby("Tanggal Pengiriman")["Ritase
+        trend_ritase = df_filtered.groupby("Tanggal Pengiriman")["Ritase"]
