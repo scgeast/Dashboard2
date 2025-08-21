@@ -205,4 +205,4 @@ fig_sales_trend.update_traces(text=df_sales["Sales"].round(2).astype(str))
 st.plotly_chart(
     styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
     use_container_width=True
-)
+"""
