@@ -1,165 +1,171 @@
 # Dashboard2
+# Dashboard2 Final Revisi
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from io import BytesIO
 
-# ===================== LOAD DATA =====================
-# Contoh load dari CSV, bisa diganti sesuai file abang
-df = pd.read_csv("data.csv")
+st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout="wide")
 
-# Pastikan kolom sesuai
-df['Tanggal Pengiriman'] = pd.to_datetime(df['Tanggal Pengiriman'])
-df['Truck No'] = df['Truck No'].astype(str)
+st.title("📦 Dashboard Analyst Delivery dan Sales")
 
-# ===================== DASHBOARD =====================
-st.set_page_config(page_title="Dashboard Transportasi", layout="wide")
+# Upload file
+uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
 
-st.title("📊 Dashboard Transportasi")
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+    df.columns = df.columns.str.strip()
 
-# ===================== PERFORM VOLUME PER DAY =====================
-st.markdown("## 📦 Perform Volume per Day")
+    # Kolom yang diharapkan
+    expected_columns = [
+        "Tanggal Pengiriman", "Area", "Plant Name", "Salesman", "End Customer",
+        "Volume", "Ritase", "Truck No", "Distance"
+    ]
+    missing_columns = [col for col in expected_columns if col not in df.columns]
 
-volume_per_day = df.groupby("Tanggal Pengiriman", as_index=False).agg({"Volume":"sum"})
+    if missing_columns:
+        st.warning(f"Kolom berikut tidak ditemukan di file Excel: {missing_columns}")
+    else:
+        # Pastikan tanggal bertipe datetime
+        df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
 
-fig_volume = px.line(
-    volume_per_day,
-    x="Tanggal Pengiriman",
-    y="Volume",
-    text="Volume",
-    title="Perform Volume per Day"
-)
+        # Sidebar Filter
+        st.sidebar.header("🔎 Filter Data")
 
-fig_volume.update_traces(
-    mode="lines+markers+text",
-    textposition="top center"
-)
+        start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
+        end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
 
-fig_volume.update_layout(
-    xaxis_title="Tanggal Pengiriman",
-    yaxis_title="Volume",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white")
-)
+        area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
 
-st.plotly_chart(fig_volume, use_container_width=True)
+        # Filter plant mengikuti Area
+        if area:
+            plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique()
+        else:
+            plant_options = df["Plant Name"].dropna().unique()
+        plant = st.sidebar.multiselect("Plant Name", options=plant_options)
 
-# ===================== RITASE PER TRUCK =====================
-st.markdown("## 🚛 Ritase per Truck")
+        salesman = st.sidebar.multiselect("Salesman", options=df["Salesman"].dropna().unique())
+        end_customer = st.sidebar.multiselect("End Customer", options=df["End Customer"].dropna().unique())
 
-# Total & Average Ritase
-ritase_per_truck = df.groupby("Truck No", as_index=False).agg({"Ritase":["sum","mean"]})
-ritase_per_truck.columns = ["Truck No", "Total Ritase", "Average Ritase"]
+        # Tombol reset filter
+        if st.sidebar.button("🔄 Reset Filter"):
+            area, plant, salesman, end_customer = [], [], [], []
+            start_date, end_date = df["Tanggal Pengiriman"].min(), df["Tanggal Pengiriman"].max()
 
-# --- Total Ritase ---
-st.markdown("### 📍 Total Ritase per Truck")
+        # Terapkan filter
+        df_filtered = df.copy()
+        df_filtered = df_filtered[(df_filtered["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
+                                  (df_filtered["Tanggal Pengiriman"] <= pd.to_datetime(end_date))]
+        if area:
+            df_filtered = df_filtered[df_filtered["Area"].isin(area)]
+        if plant:
+            df_filtered = df_filtered[df_filtered["Plant Name"].isin(plant)]
+        if salesman:
+            df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
+        if end_customer:
+            df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
 
-fig_total = px.bar(
-    ritase_per_truck,
-    x="Truck No",
-    y="Total Ritase",
-    text="Total Ritase",
-    title="Total Ritase per Truck"
-)
-fig_total.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-fig_total.update_layout(
-    xaxis=dict(tickangle=45),
-    yaxis_title="Total Ritase",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white"),
-    margin=dict(l=50, r=50, t=80, b=200)
-)
-st.plotly_chart(fig_total, use_container_width=True)
+        # Fungsi ekspor Excel
+        def to_excel(dataframe):
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                dataframe.to_excel(writer, index=False, sheet_name="Report")
+            return output.getvalue()
 
-# --- Average Ritase ---
-st.markdown("### 📍 Average Ritase per Truck")
+        excel_data = to_excel(df_filtered)
+        st.download_button("📥 Download data sebagai Excel", excel_data, "report.xlsx",
+                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# Versi 1: tampil semua truck
-fig_avg = px.bar(
-    ritase_per_truck,
-    x="Truck No",
-    y="Average Ritase",
-    text="Average Ritase",
-    title="Average Ritase per Truck"
-)
-fig_avg.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-fig_avg.update_layout(
-    xaxis=dict(tickangle=45),
-    yaxis_title="Average Ritase",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white"),
-    margin=dict(l=50, r=50, t=80, b=200)
-)
-st.plotly_chart(fig_avg, use_container_width=True)
+        # ========================== ANALISA PENJUALAN ==========================
+        st.subheader("📊 Analisa Volume Penjualan")
+        sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+        fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", markers=True,
+                                  title="Tren Volume Penjualan")
+        fig_sales_trend.update_traces(textposition="top center")
+        fig_sales_trend.update_layout(legend=dict(orientation="h", y=-0.2))
+        st.plotly_chart(fig_sales_trend, use_container_width=True)
 
-# Versi 2: scroll horizontal
-st.markdown("### 📍 Average Ritase per Truck (Scrollable)")
+        # ========================== AREA & PLANT ==========================
+        col1, col2 = st.columns(2)
 
-fig_avg_scroll = px.bar(
-    ritase_per_truck,
-    x="Truck No",
-    y="Average Ritase",
-    text="Average Ritase",
-    title="Average Ritase per Truck (Scrollable)"
-)
-fig_avg_scroll.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-fig_avg_scroll.update_layout(
-    xaxis=dict(
-        tickmode='array',
-        tickvals=ritase_per_truck['Truck No'],
-        tickangle=45,
-        rangeslider=dict(visible=True)
-    ),
-    yaxis_title="Average Ritase",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white"),
-    margin=dict(l=50, r=50, t=80, b=200)
-)
-st.plotly_chart(fig_avg_scroll, use_container_width=True)
+        with col1:
+            fig_area = px.bar(df_filtered.groupby("Area")["Volume"].sum().reset_index(),
+                              x="Area", y="Volume", title="Volume per Area", text="Volume")
+            fig_area.update_traces(texttemplate="%{text:.2s}", textposition="outside")
+            fig_area.update_layout(showlegend=False)
+            st.plotly_chart(fig_area, use_container_width=True)
 
-# ===================== PERFORM SALES =====================
-st.markdown("## 💰 Perform Sales")
+        with col2:
+            fig_plant = px.bar(df_filtered.groupby("Plant Name")["Volume"].sum().reset_index(),
+                               x="Plant Name", y="Volume", title="Volume per Plant", text="Volume")
+            fig_plant.update_traces(texttemplate="%{text:.2s}", textposition="outside")
+            fig_plant.update_layout(showlegend=False)
+            st.plotly_chart(fig_plant, use_container_width=True)
 
-sales_per_day = df.groupby("Tanggal Pengiriman", as_index=False).agg({"Sales":"sum"})
+        # ========================== SALES & CUSTOMER ==========================
+        st.subheader("👤 Performa Sales & Customer")
 
-fig_sales = px.line(
-    sales_per_day,
-    x="Tanggal Pengiriman",
-    y="Sales",
-    text="Sales",
-    title="Perform Sales per Day"
-)
-fig_sales.update_traces(mode="lines+markers+text", textposition="top center")
-fig_sales.update_layout(
-    xaxis_title="Tanggal Pengiriman",
-    yaxis_title="Sales",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white")
-)
-st.plotly_chart(fig_sales, use_container_width=True)
+        fig_salesman = px.bar(df_filtered.groupby("Salesman")["Volume"].sum().reset_index(),
+                              x="Salesman", y="Volume", title="Performa Salesman", text="Volume")
+        fig_salesman.update_traces(texttemplate="%{text:.2s}", textposition="outside")
+        fig_salesman.update_layout(showlegend=False)
+        st.plotly_chart(fig_salesman, use_container_width=True)
 
-# ===================== PERFORM CUSTOMER =====================
-st.markdown("## 👥 Perform Customer")
+        fig_customer = px.bar(df_filtered.groupby("End Customer")["Volume"].sum().reset_index(),
+                              x="End Customer", y="Volume", title="Performa End Customer", text="Volume")
+        fig_customer.update_traces(texttemplate="%{text:.2s}", textposition="outside")
+        fig_customer.update_layout(showlegend=False)
+        st.plotly_chart(fig_customer, use_container_width=True)
 
-customer_per_day = df.groupby("Tanggal Pengiriman", as_index=False).agg({"Customer":"nunique"})
+        # ========================== LOGISTIK ==========================
+        st.subheader("🚚 Optimasi Logistik")
 
-fig_customer = px.line(
-    customer_per_day,
-    x="Tanggal Pengiriman",
-    y="Customer",
-    text="Customer",
-    title="Perform Customer per Day"
-)
-fig_customer.update_traces(mode="lines+markers+text", textposition="top center")
-fig_customer.update_layout(
-    xaxis_title="Tanggal Pengiriman",
-    yaxis_title="Jumlah Customer",
-    plot_bgcolor="#0d0f15",
-    paper_bgcolor="#0d0f15",
-    font=dict(color="white")
-)
-st.plotly_chart(fig_customer, use_container_width=True)
+        col3, col4 = st.columns(2)
+
+        with col3:
+            fig_truck_total = px.bar(df_filtered.groupby("Truck No")["Ritase"].sum().reset_index(),
+                                     x="Truck No", y="Ritase", title="Total Ritase per Truck", text="Ritase")
+            fig_truck_total.update_traces(texttemplate="%{text}", textposition="outside")
+            fig_truck_total.update_layout(showlegend=False)
+            st.plotly_chart(fig_truck_total, use_container_width=True)
+
+        with col4:
+            fig_truck_avg = px.bar(df_filtered.groupby("Truck No")["Volume"].mean().reset_index(),
+                                   x="Truck No", y="Volume", title="Average Volume per Ritase (Truck)", text="Volume")
+            fig_truck_avg.update_traces(texttemplate="%{text:.2s}", textposition="outside")
+            fig_truck_avg.update_layout(showlegend=False)
+            st.plotly_chart(fig_truck_avg, use_container_width=True)
+
+        # ========================== TREN RITASE & VOLUME ==========================
+        st.subheader("📈 Visualisasi Tren")
+
+        trend_ritase = df_filtered.groupby("Tanggal Pengiriman")["Ritase"].sum().reset_index()
+        fig_trend_ritase = px.line(trend_ritase, x="Tanggal Pengiriman", y="Ritase", markers=True,
+                                   title="Tren Ritase")
+        st.plotly_chart(fig_trend_ritase, use_container_width=True)
+
+        trend_volume = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+        fig_trend_volume = px.line(trend_volume, x="Tanggal Pengiriman", y="Volume", markers=True,
+                                   title="Tren Volume")
+        st.plotly_chart(fig_trend_volume, use_container_width=True)
+
+        # ========================== AVERAGE DISTANCE ==========================
+        st.subheader("📍 Analisa Jarak Tempuh")
+
+        col5, col6 = st.columns(2)
+
+        with col5:
+            avg_dist_plant = df_filtered.groupby("Plant Name")["Distance"].mean().reset_index()
+            fig_avg_dist_plant = px.bar(avg_dist_plant, x="Plant Name", y="Distance",
+                                        title="Average Distance per Plant", text="Distance")
+            fig_avg_dist_plant.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+            fig_avg_dist_plant.update_layout(showlegend=False)
+            st.plotly_chart(fig_avg_dist_plant, use_container_width=True)
+
+        with col6:
+            avg_dist_area = df_filtered.groupby("Area")["Distance"].mean().reset_index()
+            fig_avg_dist_area = px.bar(avg_dist_area, x="Area", y="Distance",
+                                       title="Average Distance per Area", text="Distance")
+            fig_avg_dist_area.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+            fig_avg_dist_area.update_layout(showlegend=False)
+            st.plotly_chart(fig_avg_dist_area, use_container_width=True)
