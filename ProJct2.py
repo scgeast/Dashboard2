@@ -163,4 +163,8 @@ if uploaded_file:
         fig_trend_ritase.update_layout(plot_bgcolor=bg_color, paper_bgcolor=bg_color, font=dict(color=font_color))
         st.plotly_chart(fig_trend_ritase, use_container_width=True)
 
-        trend_volume = df_filtered.groupby("Tanggal Pengiriman")["Volume
+        trend_volume = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
+        trend_volume["Volume"] = trend_volume["Volume"].round(2)
+        fig_trend_volume = px.line(trend_volume, x="Tanggal Pengiriman", y="Volume", markers=True,
+                                   title="Tren Volume")
+        fig_trend_volume.update_layout
