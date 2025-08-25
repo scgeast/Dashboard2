@@ -25,6 +25,8 @@ st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan
 # =========================
 uploaded_file = st.file_uploader("Upload file Excel Delivery (5MB–30MB)", type=["xlsx", "xls"], key="delivery")
 uploaded_target = st.file_uploader("Upload file Target Volume", type=["xlsx", "xls"], key="target")
+st.write("Kolom df:", df.columns.tolist())
+st.write("5 data pertama:", df.head())
 
 # =========================
 # Fungsi Styling Chart
@@ -165,7 +167,10 @@ if uploaded_file:
         df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
     if end_customer:
         df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
-
+    st.write("Jumlah baris df_filtered:", len(df_filtered))
+    st.write("Tanggal min:", df['Tanggal Pengiriman'].min())
+    st.write("Tanggal max:", df['Tanggal Pengiriman'].max())
+    
     # =========================
     # Dashboard Summary
     # =========================
