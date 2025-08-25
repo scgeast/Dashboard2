@@ -1,7 +1,7 @@
-# Dashboard2 Full Version
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # =========================
 # Konfigurasi halaman
@@ -24,9 +24,10 @@ font_color = "white" if theme == "Gelap" else "black"
 st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan Sales</h1>", unsafe_allow_html=True)
 
 # =========================
-# Upload File
+# Upload File Data dan Target
 # =========================
-uploaded_file = st.file_uploader("Upload file Excel (5MB–30MB)", type=["xlsx", "xls"])
+uploaded_file = st.file_uploader("Upload file Excel Delivery (5MB–30MB)", type=["xlsx", "xls"], key="delivery")
+uploaded_target = st.file_uploader("Upload file Target Volume", type=["xlsx", "xls"], key="target")
 
 # =========================
 # Fungsi Styling Chart
@@ -72,13 +73,10 @@ def boxed_metric(label, value):
 # =========================
 def render_volume_chart(df_filtered, font_color):
     st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
-
     sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
     sales_trend["Volume"] = sales_trend["Volume"].round(2)
-
     fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", text="Volume", title="Volume Per Day")
     fig_sales_trend.update_traces(mode="lines+markers+text", textposition="top center")
-
     st.plotly_chart(
         styled_chart(fig_sales_trend, height=400, font_size=13, text_position="top center"),
         use_container_width=True
@@ -106,6 +104,18 @@ if uploaded_file:
             df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
 
     df["Tanggal Pengiriman"] = pd.to_datetime(df["Tanggal Pengiriman"])
+
+    # =========================
+    # Target Data
+    # =========================
+    df_target_plant = df_target_area = None
+    if uploaded_target:
+        df_target = pd.read_excel(uploaded_target)
+        df_target.columns = df_target.columns.str.strip()
+        if "Plant Name" in df_target.columns and "Target Volume" in df_target.columns:
+            df_target_plant = df_target[["Plant Name", "Target Volume"]].drop_duplicates()
+        if "Area" in df_target.columns and "Target Volume" in df_target.columns:
+            df_target_area = df_target[["Area", "Target Volume"]].drop_duplicates()
 
     # =========================
     # Sidebar Filter
@@ -142,9 +152,7 @@ if uploaded_file:
     # Dashboard Summary
     # =========================
     st.markdown(f"<h2 style='color:{font_color}'>📊 Summarize</h2>", unsafe_allow_html=True)
-
     colA, colB, colC, colD, colE, colF = st.columns(6)
-
     with colA:
         boxed_metric("Total Area", f"{df_filtered['Area'].nunique()}")
     with colB:
@@ -164,20 +172,50 @@ if uploaded_file:
     render_volume_chart(df_filtered, font_color)
 
     # =========================
-    # Perform Delivery per Area & Plant
+    # Perform Delivery per Area & Plant (Bar + Target Line)
     # =========================
     col1, col2 = st.columns(2)
     with col1:
         volume_area = df_filtered.groupby("Area")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
-        fig_area = px.bar(volume_area, x="Area", y="Volume", text="Volume", color="Area",
-                         title="Perform Delivery per Area", color_discrete_sequence=color_palette)
-        st.plotly_chart(styled_chart(fig_area), use_container_width=True)
+        if df_target_area is not None:
+            volume_area = pd.merge(volume_area, df_target_area, on="Area", how="left")
+            fig_area = go.Figure()
+            fig_area.add_trace(go.Bar(
+                x=volume_area["Area"], y=volume_area["Volume"], name="Actual Volume",
+                marker_color=color_palette[0], text=volume_area["Volume"], textposition="outside"
+            ))
+            fig_area.add_trace(go.Scatter(
+                x=volume_area["Area"], y=volume_area["Target Volume"], mode="lines+markers+text",
+                name="Target Volume", marker_color=color_palette[1], text=volume_area["Target Volume"],
+                textposition="top center"
+            ))
+            fig_area.update_layout(title="Perform Delivery per Area (vs Target)")
+            st.plotly_chart(styled_chart(fig_area, show_legend=True), use_container_width=True)
+        else:
+            fig_area = px.bar(volume_area, x="Area", y="Volume", text="Volume", color="Area",
+                              title="Perform Delivery per Area", color_discrete_sequence=color_palette)
+            st.plotly_chart(styled_chart(fig_area), use_container_width=True)
 
     with col2:
         volume_plant = df_filtered.groupby("Plant Name")["Volume"].sum().reset_index().sort_values(by="Volume", ascending=False)
-        fig_plant = px.bar(volume_plant, x="Plant Name", y="Volume", text="Volume", color="Plant Name",
-                          title="Perform Delivery per Plant", color_discrete_sequence=color_palette)
-        st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
+        if df_target_plant is not None:
+            volume_plant = pd.merge(volume_plant, df_target_plant, on="Plant Name", how="left")
+            fig_plant = go.Figure()
+            fig_plant.add_trace(go.Bar(
+                x=volume_plant["Plant Name"], y=volume_plant["Volume"], name="Actual Volume",
+                marker_color=color_palette[0], text=volume_plant["Volume"], textposition="outside"
+            ))
+            fig_plant.add_trace(go.Scatter(
+                x=volume_plant["Plant Name"], y=volume_plant["Target Volume"], mode="lines+markers+text",
+                name="Target Volume", marker_color=color_palette[1], text=volume_plant["Target Volume"],
+                textposition="top center"
+            ))
+            fig_plant.update_layout(title="Perform Delivery per Plant (vs Target)")
+            st.plotly_chart(styled_chart(fig_plant, show_legend=True), use_container_width=True)
+        else:
+            fig_plant = px.bar(volume_plant, x="Plant Name", y="Volume", text="Volume", color="Plant Name",
+                               title="Perform Delivery per Plant", color_discrete_sequence=color_palette)
+            st.plotly_chart(styled_chart(fig_plant), use_container_width=True)
 
     # =========================
     # Performa Sales & Customer
@@ -238,6 +276,4 @@ if uploaded_file:
         st.plotly_chart(styled_chart(fig_avg_dist_area), use_container_width=True)
 
 else:
-    st.info("Silakan upload file Excel terlebih dahulu untuk menampilkan dashboard.")
-
-                 
+    st.info("Silakan upload file Excel Delivery terlebih dahulu untuk menampilkan dashboard.")
