@@ -13,9 +13,6 @@ st.set_page_config(page_title="📦 Dashboard Analyst Delivery & Sales", layout=
 # =========================
 color_palette = ["#00FFFF", "#8A2BE2", "#00FF00", "#FF00FF", "#FFD700", "#00CED1"]
 
-# =========================
-# Sidebar Tema
-# =========================
 st.sidebar.header("🎨 Pengaturan Tampilan")
 theme = st.sidebar.radio("Pilih Tema", ["Gelap", "Terang"])
 bg_color = "#0d0f15" if theme == "Gelap" else "white"
@@ -89,16 +86,37 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df.columns = df.columns.str.strip()
 
-    # Rename kolom jika perlu
+    # ========== Robust kolom tanggal ==========
+    possible_date_columns = [
+        "Tanggal Pengiriman",
+        "tanggal pengiriman",
+        "Tanggal pengiriman",
+        "DP Date",
+        "Delivery Date",
+        "delivery date",
+        "Tanggal P"
+    ]
+    tanggal_col = None
+    for col in df.columns:
+        if col in possible_date_columns or any(k in col.lower() for k in ["tanggal", "date", "dp"]):
+            tanggal_col = col
+            break
+
+    if tanggal_col:
+        df.rename(columns={tanggal_col: "Tanggal Pengiriman"}, inplace=True)
+    else:
+        st.error("Kolom tanggal pengiriman tidak ditemukan. Pastikan file Anda punya kolom tanggal pengiriman yang jelas.")
+        st.stop()
+
+    # ========== Rename kolom lain jika perlu ==========
     rename_map = {
-        "Tanggal P": "Tanggal Pengiriman",
         "Plant Name": "Plant Name",
         "Area": "Area",
         "Ritase": "Ritase"
     }
     df.rename(columns=rename_map, inplace=True)
 
-    # Tambahkan kolom default jika tidak ada
+    # ========== Tambahkan kolom default jika tidak ada ==========
     for col in ["Salesman", "End Customer", "Volume", "Truck No", "Distance", "Ritase"]:
         if col not in df.columns:
             df[col] = 1 if col in ["Volume", "Ritase", "Distance"] else "Unknown"
