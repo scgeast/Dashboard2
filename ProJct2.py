@@ -25,8 +25,6 @@ st.markdown(f"<h1 style='color:{font_color}'>📦 Dashboard Analyst Delivery dan
 # =========================
 uploaded_file = st.file_uploader("Upload file Excel Delivery (5MB–30MB)", type=["xlsx", "xls"], key="delivery")
 uploaded_target = st.file_uploader("Upload file Target Volume", type=["xlsx", "xls"], key="target")
-st.write("Kolom df:", df.columns.tolist())
-st.write("5 data pertama:", df.head())
 
 # =========================
 # Fungsi Styling Chart
@@ -72,6 +70,9 @@ def boxed_metric(label, value):
 # =========================
 def render_volume_chart(df_filtered, font_color):
     st.markdown(f"<h2 style='color:{font_color}'>📈 Volume Per Day</h2>", unsafe_allow_html=True)
+    if df_filtered.shape[0] == 0:
+        st.warning("Data tidak ditemukan untuk filter yang dipilih.")
+        return
     sales_trend = df_filtered.groupby("Tanggal Pengiriman")["Volume"].sum().reset_index()
     sales_trend["Volume"] = sales_trend["Volume"].round(2)
     fig_sales_trend = px.line(sales_trend, x="Tanggal Pengiriman", y="Volume", text="Volume", title="Volume Per Day")
@@ -90,13 +91,8 @@ if uploaded_file:
 
     # ========== Robust kolom tanggal ==========
     possible_date_columns = [
-        "Tanggal Pengiriman",
-        "tanggal pengiriman",
-        "Tanggal pengiriman",
-        "DP Date",
-        "Delivery Date",
-        "delivery date",
-        "Tanggal P"
+        "Tanggal Pengiriman", "tanggal pengiriman", "Tanggal pengiriman", "DP Date",
+        "Delivery Date", "delivery date", "Tanggal P"
     ]
     tanggal_col = None
     for col in df.columns:
@@ -111,6 +107,7 @@ if uploaded_file:
         st.stop()
 
     # ========== Rename kolom lain jika perlu ==========
+    # Catatan: jika kolom Anda berbeda, tambahkan di sini
     rename_map = {
         "Plant Name": "Plant Name",
         "Area": "Area",
@@ -141,8 +138,12 @@ if uploaded_file:
     # Sidebar Filter
     # =========================
     st.sidebar.header("🔎 Filter Data")
-    start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
-    end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
+    # Hindari filter otomatis jika data kosong
+    if df.shape[0] > 0:
+        start_date = st.sidebar.date_input("Start Date", df["Tanggal Pengiriman"].min())
+        end_date = st.sidebar.date_input("End Date", df["Tanggal Pengiriman"].max())
+    else:
+        start_date = end_date = None
     area = st.sidebar.multiselect("Area", options=df["Area"].dropna().unique())
     plant_options = df[df["Area"].isin(area)]["Plant Name"].dropna().unique() if area else df["Plant Name"].dropna().unique()
     plant = st.sidebar.multiselect("Plant Name", options=plant_options)
@@ -155,10 +156,13 @@ if uploaded_file:
     # =========================
     # Filter Data
     # =========================
-    df_filtered = df[
-        (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
-        (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
-    ]
+    if start_date and end_date:
+        df_filtered = df[
+            (df["Tanggal Pengiriman"] >= pd.to_datetime(start_date)) &
+            (df["Tanggal Pengiriman"] <= pd.to_datetime(end_date))
+        ]
+    else:
+        df_filtered = df.copy()
     if area:
         df_filtered = df_filtered[df_filtered["Area"].isin(area)]
     if plant:
@@ -167,10 +171,13 @@ if uploaded_file:
         df_filtered = df_filtered[df_filtered["Salesman"].isin(salesman)]
     if end_customer:
         df_filtered = df_filtered[df_filtered["End Customer"].isin(end_customer)]
-    st.write("Jumlah baris df_filtered:", len(df_filtered))
-    st.write("Tanggal min:", df['Tanggal Pengiriman'].min())
-    st.write("Tanggal max:", df['Tanggal Pengiriman'].max())
-    
+
+    # Debug: tampilkan info data jika kosong
+    if df_filtered.shape[0] == 0:
+        st.warning("Data tidak ditemukan untuk filter yang dipilih. Silakan cek ulang filter atau file Excel Anda.")
+        st.write("Nama kolom:", df.columns.tolist())
+        st.write("Contoh 5 data:", df.head())
+
     # =========================
     # Dashboard Summary
     # =========================
